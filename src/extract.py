@@ -333,7 +333,7 @@ def extract(text: str) -> dict:
         "subject": _parse_subject(normalized_text),
     }
 
-    if result["contractor"] is None:
+    if result["contractor"] is None and (result["amount"] is not None or result["date"] is not None):
         result["inn"] = None
 
     return result
