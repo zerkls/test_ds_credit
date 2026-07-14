@@ -24,18 +24,17 @@ def run_extract_and_classify() -> None:
     txt_files = sorted(
         p for p in DATASET_DIR.glob("*.txt") if p.name != "subjects_test.txt"
     )
-    header = f"{'файл':<32}{'тип':<10}{'увер.':<8}{'сумма':<14}{'дата':<12}{'ИНН':<14}{'предмет':<30}"
+    header = f"{'файл':<32}{'amount':<14}{'date':<12}{'inn':<14}{'contractor':<30}"
     print(header)
-    print("-" * len(header))
+    print("-" * 100)
 
     for path in txt_files:
         text = path.read_text(encoding="utf-8")
-        doc_type, confidence = classify(text)
         fields = extract(text)
-        amount = f"{fields['amount']:.2f}" if fields["amount"] is not None else "—"
+        amount = f"{fields['amount']:.1f}" if fields["amount"] is not None else "—"
         row = (
-            f"{path.name:<32}{doc_type:<10}{confidence:<8}{amount:<14}"
-            f"{str(fields['date']):<12}{str(fields['inn']):<14}{str(fields['subject'])[:28]:<30}"
+            f"{path.name:<32}{amount:<14}"
+            f"{str(fields['date']):<12}{str(fields['inn']):<14}{str(fields['contractor'])[:28]:<30}"
         )
         print(row)
 
@@ -49,7 +48,7 @@ def run_subject_check() -> None:
     lines = (DATASET_DIR / "subjects_test.txt").read_text(encoding="utf-8").splitlines()
     header = f"{'предмет оплаты':<55}{'ожидание':<10}{'matches':<10}{'conf.':<8}{'причина'}"
     print(header)
-    print("-" * len(header))
+    print("-" * 100)
 
     correct = 0
     scored = 0  

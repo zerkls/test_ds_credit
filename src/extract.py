@@ -146,6 +146,32 @@ def _parse_number(raw: str) -> Optional[float]:
 
 
 def _parse_date(text: str) -> Optional[str]:
+    if re.search(r"акт|упд|универсальный передаточный", text, re.IGNORECASE):
+        match = re.search(
+            r"№\s*\d+\s+от\s+(?P<d>\d{1,2})\s+(?P<mon>" + "|".join(RU_MONTHS.keys()) + r")\s+(?P<y>\d{4})",
+            text, re.IGNORECASE
+        )
+        if match:
+            try:
+                day = int(match.group("d"))
+                month = RU_MONTHS[match.group("mon").lower()]
+                year = int(match.group("y"))
+                return date(year, month, day).isoformat()
+            except (ValueError, KeyError):
+                pass
+        match = re.search(
+            r"№\s*\d+\s+от\s+(?P<d>\d{1,2})[.\-](?P<m>\d{1,2})[.\-](?P<y>\d{4})",
+            text, re.IGNORECASE
+        )
+        if match:
+            try:
+                day = int(match.group("d"))
+                month = int(match.group("m"))
+                year = int(match.group("y"))
+                return date(year, month, day).isoformat()
+            except ValueError:
+                pass
+
     for pattern in DATE_PATTERNS:
         match = pattern.search(text)
         if not match:
@@ -169,6 +195,9 @@ def _parse_date(text: str) -> Optional[str]:
 def _normalize_ocr_text(text: str) -> str:
     """Лёгкая нормализация типичных OCR-замен перед извлечением полей."""
     normalized = text
+
+    normalized = normalized.replace('"', '«').replace('"', '«')
+
     for src, dst in (
         ("ИHH", "ИНН"),
         ("ИНH", "ИНН"),
@@ -195,6 +224,7 @@ def _normalize_ocr_text(text: str) -> str:
         normalized,
     )
     normalized = re.sub(r"(?:^|[\s:])l\s+(\d)", r" 1 \1", normalized)
+
     return normalized
 
 
@@ -249,15 +279,24 @@ def _parse_amount(text: str) -> Optional[float]:
 
 
 def _parse_inn(text: str) -> Optional[str]:
-    match = INN_PATTERN.search(text)
-    return match.group(1) if match else None
-
+    matches = re.findall(r"ИНН(?:\s*/\s*КПП)?\s*[:№]?\s*([\d\s\-\./]+)", text, re.IGNORECASE)
+    if not matches:
+        return None
+    for group in matches:
+        # Разбиваем по пробелам, слешам, дефисам, точкам
+        parts = re.split(r"[\s\-\./]+", group.strip())
+        for part in parts:
+            part = part.strip()
+            if len(part) in (10, 12, 14):
+                return part  # первый подходящий ИНН
+    return None
 
 def _parse_contractor(text: str) -> Optional[str]:
-    for pattern in CONTRACTOR_PATTERNS:
+    for pattern in CONTRACTOR_PATTERNS[::-1]:
         match = pattern.search(text)
         if match:
-            return match.group(1).strip().strip('"«»')
+            contractor = match.group(1).strip()
+            return _normalize_ocr_text(contractor)
     return None
 
 
@@ -286,10 +325,17 @@ def extract(text: str) -> dict:
 
     normalized_text = _normalize_ocr_text(text)
 
-    return {
+    result = {
         "amount": _parse_amount(normalized_text),
         "date": _parse_date(normalized_text),
         "inn": _parse_inn(normalized_text),
         "contractor": _parse_contractor(normalized_text),
         "subject": _parse_subject(normalized_text),
     }
+
+    if result["contractor"] is None:
+        result["inn"] = None
+
+    return result
+
+
