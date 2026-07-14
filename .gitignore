@@ -1,0 +1,17 @@
+# Файлы байт-кода Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Виртуальное окружение
+venv/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# IDEs и редакторы
+.vscode/
+.idea/
+.DS_Store
