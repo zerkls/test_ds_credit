@@ -287,7 +287,7 @@ def _parse_inn(text: str) -> Optional[str]:
         parts = re.split(r"[\s\-\./]+", group.strip())
         for part in parts:
             part = part.strip()
-            if len(part) in (10, 12, 14):
+            if len(part) in (10, 12):
                 return part  # первый подходящий ИНН
     return None
 
